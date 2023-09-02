@@ -1,0 +1,45 @@
+version: '3.7'
+
+services:
+  service-a:
+    build:
+      context: "../../"
+      dockerfile: "build/docker/images/go/Dockerfile"
+    container_name: service-a
+    working_dir: "/app/cmd/serviceA"
+    env_file:
+      - ../services/serviceA/service.env
+    depends_on:
+      - "service-a-db"
+      - "service-a-redis"
+    links:
+      - service-a-db
+      - service-a-redis
+    expose:
+      - 8082
+    command: bash -c "CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main . && ./main"
+    ports:
+      - "8082:8082"
+    networks:
+      - services-network
+  service-a-db:
+    image: postgres:latest
+    container_name: service-a-db
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=ServiceA
+    ports:
+      - '5433:5432'
+    networks:
+      - services-network
+  service-a-redis:
+    image: redis:alpine
+    container_name: redis
+    networks:
+      - services-network
+    ports:
+      - "6380:6379"
+networks:
+  services-network:
+    external: true
